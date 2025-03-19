@@ -61,7 +61,6 @@ func GetCommitMessageFromLLM(changes string) string {
 
 	// Print the response
 	if len(resp.Choices) > 0 {
-		// log.Printf("Response: %+v", resp.Choices[0].Content)
 		return resp.Choices[0].Content
 	} else {
 		log.Println("No response choices received")
