@@ -11,10 +11,19 @@ import (
 
 const (
 	openRouterApi = "https://openrouter.ai/api/v1"
-	model         = "google/gemini-2.0-flash-lite-preview-02-05:free"
+	defaultModel  = "google/gemini-2.0-flash-lite-preview-02-05:free"
 	system        = "You are a senior technical lead and will review code to provide conventional commit message based on the changes staged for commit. Provide key changes or features to be included."
 	maxTokens     = 4096
 )
+
+var model string
+
+func init() {
+	model = os.Getenv("MODEL_NAME")
+	if model == "" {
+		model = defaultModel
+	}
+}
 
 func GetCommitMessageFromLLM(changes string) string {
 	if changes == "" {
