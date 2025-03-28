@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	openRouterApi = "https://openrouter.ai/api/v1"
-	defaultModel  = "google/gemini-2.0-flash-lite-preview-02-05:free"
-	system        = "You are a senior technical lead and will review code to provide conventional commit message based on the changes staged for commit. Provide key changes or features to be included."
-	maxTokens     = 4096
+	openRouterApi  = "https://openrouter.ai/api/v1"
+	defaultModel   = "google/gemini-2.0-flash-lite-preview-02-05:free"
+	system         = "You are a senior technical lead and will review code to provide conventional commit message based on the changes staged for commit. Provide key changes or features to be included."
+	systemShortMsg = "I want you to act as a commit message generator. I will provide you with information about the task and the prefix for the task code, and I would like you to generate an appropriate commit message using the conventional commit format. Do not write any explanations or other words, just reply with the commit message."
+	maxTokens      = 4096
 )
 
 var model string
