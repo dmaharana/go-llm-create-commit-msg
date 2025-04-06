@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 
 	"createCommitMsg/internal/action"
@@ -27,7 +28,65 @@ func main() {
 	var format string
 	flag.StringVar(&format, "format", "r", "Format: 'r' (raw) or 'j' (json)")
 
+	var tag1 string
+	var tag2 string
+	flag.StringVar(&tag1, "tag1", "", "Older git tag for changelog generation")
+	flag.StringVar(&tag2, "tag2", "", "Newer git tag for changelog generation")
+
 	flag.Parse()
+
+	if tag1 != "" && tag2 != "" {
+		messages, err := git.GetCommitMessagesBetweenTags(tag1, tag2)
+		if err != nil {
+			log.Fatalf("Error fetching commits between tags: %v", err)
+		}
+
+		var newFeatures []string
+		var bugFixes []string
+		var otherStuff []string
+
+		for _, msg := range messages {
+			lmsg := msg
+			if len(lmsg) >= 5 && (lmsg[:5] == "feat:" || lmsg[:5] == "Feat:" || lmsg[:8] == "feature:" || lmsg[:8] == "Feature:") {
+				newFeatures = append(newFeatures, msg)
+			} else if len(lmsg) >= 4 && (lmsg[:4] == "fix:" || lmsg[:4] == "Fix:") {
+				bugFixes = append(bugFixes, msg)
+			} else {
+				otherStuff = append(otherStuff, msg)
+			}
+		}
+
+		fmt.Println("# Changelog")
+		fmt.Printf("\nChanges between `%s` and `%s`\n\n", tag1, tag2)
+
+		fmt.Println("## New Features")
+		if len(newFeatures) == 0 {
+			fmt.Println("_None_")
+		} else {
+			for _, feat := range newFeatures {
+				fmt.Println("- " + feat)
+			}
+		}
+
+		fmt.Println("\n## Bug Fixes")
+		if len(bugFixes) == 0 {
+			fmt.Println("_None_")
+		} else {
+			for _, fix := range bugFixes {
+				fmt.Println("- " + fix)
+			}
+		}
+
+		fmt.Println("\n## Other Stuff")
+		if len(otherStuff) == 0 {
+			fmt.Println("_None_")
+		} else {
+			for _, other := range otherStuff {
+				fmt.Println("- " + other)
+			}
+		}
+		return
+	}
 
 	// Normalize mode flag
 	switch mode {

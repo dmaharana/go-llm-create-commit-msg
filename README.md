@@ -85,6 +85,33 @@ go run cmd/main.go --mode [r|c|b] --output [r|c|b] --format [r|j]
 
 ---
 
+### Generating a Changelog Between Tags
+
+You can generate a categorized changelog between two git tags using the `--tag1` and `--tag2` flags:
+
+```bash
+go run cmd/main.go --tag1 <older-tag> --tag2 <newer-tag>
+```
+
+- `--tag1`: The older git tag (start of the range)
+- `--tag2`: The newer git tag (end of the range)
+
+**Example:**
+
+```bash
+go run cmd/main.go --tag1 v1.0.0 --tag2 v1.1.0
+```
+
+This will output a markdown-formatted changelog with sections:
+
+- **New Features** (commits starting with `feat:` or `feature:`)
+- **Bug Fixes** (commits starting with `fix:`)
+- **Other Stuff** (all other commits)
+
+The changelog is printed directly to your terminal.
+
+---
+
 ## How it works
 
 - The tool analyzes your **staged Git changes**.
