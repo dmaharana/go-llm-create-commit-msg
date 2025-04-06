@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 
 	"createCommitMsg/internal/action"
 	"createCommitMsg/internal/constant"
@@ -31,11 +32,19 @@ func init() {
 	}
 }
 
-func CallLLM(changes string, role string) string {
+func CallLLM(changes string, roles []string) (map[string]string, error) {
 	if changes == "" {
 		log.Println("No staged changes found.")
-		return ""
+		return nil, fmt.Errorf("no staged changes found")
 	}
+
+	if len(roles) == 0 {
+		log.Println("No roles found.")
+		return nil, fmt.Errorf("no roles found")
+	}
+
+	// sanitize changes
+	changes = SanitizeInput(changes)
 
 	llmBaseURL := openRouterApi
 
@@ -46,18 +55,25 @@ func CallLLM(changes string, role string) string {
 	)
 	if err != nil {
 		log.Fatal("Error initializing LLM:", err)
-		return ""
+		return nil, err
 	}
 
 	// Define the context
 	ctx := context.Background()
 
 	// Set the system message and user message
-	systemMessage := getSystemMessage(role)
-	content := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, systemMessage),
-		llms.TextParts(llms.ChatMessageTypeHuman, changes),
+	systemMessages := []string{}
+	for _, role := range roles {
+		systemMessages = append(systemMessages, getSystemMessage(role))
 	}
+
+	systemMessages = RemoveDuplicates(systemMessages)
+
+	content := []llms.MessageContent{}
+	for _, systemMessage := range systemMessages {
+		content = append(content, llms.TextParts(llms.ChatMessageTypeSystem, systemMessage))
+	}
+	content = append(content, llms.TextParts(llms.ChatMessageTypeHuman, changes))
 
 	// Call the OpenRouter API via the client if streaming is needed
 	// resp, err := client.GenerateContent(ctx, content,
@@ -72,18 +88,24 @@ func CallLLM(changes string, role string) string {
 	if err != nil {
 		// log.Fatal(err)
 		log.Printf("Error calling API: %v\n", err)
-		return ""
+		return nil, err
 	}
 
 	// Print the token count
-	PrintTokenCount(resp)
+	PrintTokenCounts(resp)
 
 	// Print the response
 	if len(resp.Choices) > 0 {
-		return resp.Choices[0].Content
+		content := map[string]string{}
+		for i, role := range roles {
+			if i < len(resp.Choices) {
+				content[role] = resp.Choices[i].Content
+			}
+		}
+		return content, nil
 	} else {
 		log.Println("No response choices received")
-		return ""
+		return nil, fmt.Errorf("no response choices received")
 	}
 }
 
@@ -100,10 +122,10 @@ func getSystemMessage(role string) string {
 }
 
 // print number of tokens used
-func PrintTokenCount(resp *llms.ContentResponse) {
+// func PrintTokenCount(resp *llms.ContentResponse) {
+func PrintTokenCount(choice *llms.ContentChoice) {
 	log.Println("Printing token count...")
 
-	choice := resp.Choices[0]
 	if choice == nil {
 		log.Println("No choice found in response")
 		return
@@ -130,14 +152,40 @@ func PrintTokenCount(resp *llms.ContentResponse) {
 
 	// Check if usage stats are available (OpenAI-specific)
 	if choice.GenerationInfo != nil {
-		if completionTokens, ok := choice.GenerationInfo[constant.CompletionTokens].(int); ok {
-			fmt.Printf("Tokens received (exact):           %d\n", completionTokens)
-		}
 		if promptTokens, ok := choice.GenerationInfo[constant.PromptTokens].(int); ok {
-			fmt.Printf("Tokens sent (exact):               %d\n", promptTokens)
+			fmt.Printf("Tokens sent (exact)              : %4d\n", promptTokens)
 		}
 		if reasoningTokens, ok := choice.GenerationInfo[constant.ReasoningTokens].(int); ok {
-			fmt.Printf("Tokens used for reasoning (exact): %d\n", reasoningTokens)
+			fmt.Printf("Tokens used for reasoning (exact): %4d\n", reasoningTokens)
+		}
+		if completionTokens, ok := choice.GenerationInfo[constant.CompletionTokens].(int); ok {
+			fmt.Printf("Tokens received (exact)          : %4d\n", completionTokens)
 		}
 	}
+}
+
+// print token for all the choices
+func PrintTokenCounts(resp *llms.ContentResponse) {
+	for _, choice := range resp.Choices {
+		PrintTokenCount(choice)
+	}
+}
+
+// remove duplicate strings
+func RemoveDuplicates(strSlice []string) []string {
+	keys := make(map[string]bool)
+	var list []string
+	for _, entry := range strSlice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
+}
+
+// sanitize input to remove potentially harmful content
+func SanitizeInput(input string) string {
+	tmp := regexp.MustCompile(`[^a-zA-Z0-9 ]`).ReplaceAllString(input, " ")
+	return regexp.MustCompile(`[<>]`).ReplaceAllString(tmp, "")
 }
