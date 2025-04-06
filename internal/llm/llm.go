@@ -2,19 +2,24 @@ package llm
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
+
+	"createCommitMsg/internal/action"
+	"createCommitMsg/internal/constant"
+	"createCommitMsg/internal/prompt"
 
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 )
 
 const (
-	openRouterApi  = "https://openrouter.ai/api/v1"
-	defaultModel   = "google/gemini-2.0-flash-lite-preview-02-05:free"
-	system         = "You are a senior technical lead and will review code to provide conventional commit message based on the changes staged for commit. Provide key changes or features to be included."
-	systemShortMsg = "I want you to act as a commit message generator. I will provide you with information about the task and the prefix for the task code, and I would like you to generate an appropriate commit message using the conventional commit format. Do not write any explanations or other words, just reply with the commit message."
-	maxTokens      = 4096
+	openRouterApi = "https://openrouter.ai/api/v1"
+	defaultModel  = "google/gemini-2.0-flash-lite-preview-02-05:free"
+
+	// maxTokens is the maximum number of tokens to generate.
+	maxTokens = 4096
 )
 
 var model string
@@ -26,7 +31,7 @@ func init() {
 	}
 }
 
-func GetCommitMessageFromLLM(changes string) string {
+func CallLLM(changes string, role string) string {
 	if changes == "" {
 		log.Println("No staged changes found.")
 		return ""
@@ -47,9 +52,10 @@ func GetCommitMessageFromLLM(changes string) string {
 	// Define the context
 	ctx := context.Background()
 
-	// Specify the model and messages
+	// Set the system message and user message
+	systemMessage := getSystemMessage(role)
 	content := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, system),
+		llms.TextParts(llms.ChatMessageTypeSystem, systemMessage),
 		llms.TextParts(llms.ChatMessageTypeHuman, changes),
 	}
 
@@ -69,11 +75,69 @@ func GetCommitMessageFromLLM(changes string) string {
 		return ""
 	}
 
+	// Print the token count
+	PrintTokenCount(resp)
+
 	// Print the response
 	if len(resp.Choices) > 0 {
 		return resp.Choices[0].Content
 	} else {
 		log.Println("No response choices received")
 		return ""
+	}
+}
+
+// select system message based on action
+func getSystemMessage(role string) string {
+	switch role {
+	case action.COMMIT_MESSAGE:
+		return prompt.CommitSummarizer
+	case action.CODE_REVIEW:
+		return prompt.CodeReviewer
+	default:
+		return prompt.CommitSummarizer
+	}
+}
+
+// print number of tokens used
+func PrintTokenCount(resp *llms.ContentResponse) {
+	log.Println("Printing token count...")
+
+	choice := resp.Choices[0]
+	if choice == nil {
+		log.Println("No choice found in response")
+		return
+	}
+
+	content := choice.Content
+	if content == "" {
+		log.Println("No content found in response")
+		return
+	}
+
+	log.Printf("Stop reason: %s\n", choice.StopReason)
+	if choice.ReasoningContent != "" {
+		log.Printf("Reasoning content: %s\n", choice.ReasoningContent)
+	}
+
+	if choice.FuncCall != nil {
+		log.Printf("Function call: %+v\n", choice.FuncCall)
+	}
+
+	if len(choice.ToolCalls) > 0 {
+		log.Printf("Tool calls: %+v\n", choice.ToolCalls)
+	}
+
+	// Check if usage stats are available (OpenAI-specific)
+	if choice.GenerationInfo != nil {
+		if completionTokens, ok := choice.GenerationInfo[constant.CompletionTokens].(int); ok {
+			fmt.Printf("Tokens received (exact):           %d\n", completionTokens)
+		}
+		if promptTokens, ok := choice.GenerationInfo[constant.PromptTokens].(int); ok {
+			fmt.Printf("Tokens sent (exact):               %d\n", promptTokens)
+		}
+		if reasoningTokens, ok := choice.GenerationInfo[constant.ReasoningTokens].(int); ok {
+			fmt.Printf("Tokens used for reasoning (exact): %d\n", reasoningTokens)
+		}
 	}
 }
