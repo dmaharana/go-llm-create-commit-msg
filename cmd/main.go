@@ -87,7 +87,12 @@ func main() {
 		roles = []string{action.CODE_REVIEW, action.COMMIT_MESSAGE}
 	}
 
-	changes := git.GetChanges()
+	// changes := git.GetChanges()
+	changes, err := git.GetChangesInJSON()
+	if err != nil {
+		log.Printf("Error getting staged changes in JSON: %v\n", err)
+		return
+	}
 	log.Println("Staged changes length:", len(changes))
 	if changes == "" {
 		log.Println("No staged changes found.")
