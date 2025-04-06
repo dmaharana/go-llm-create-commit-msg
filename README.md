@@ -1,78 +1,132 @@
 # createCommitMsg
 
-This project provides a command-line tool to generate commit messages.
+A command-line tool that uses Large Language Models (LLMs) via OpenRouter to generate **commit messages** and **code review comments** based on your staged Git changes.
+
+---
 
 ## Prerequisites
 
 - Go (version 1.18 or higher)
 - Git
+- An OpenRouter API key (https://openrouter.ai/)
+
+---
 
 ## Installation
 
-1.  Clone the repository:
+1. **Clone the repository:**
 
-    ```bash
-    git clone https://github.com/titu/createCommitMsg
-    cd createCommitMsg
-    ```
+   ```bash
+   git clone https://github.com/titu/createCommitMsg
+   cd createCommitMsg
+   ```
 
-    (Replace `<repository_url>` with the actual URL of the repository.)
+2. **Build the executable:**
 
-2.  Build the executable:
+   ```bash
+   make build
+   ```
 
-    ```bash
-    make build
-    ```
+---
+
+## Configuration
+
+Set your OpenRouter API key as an environment variable:
+
+```bash
+export OPEN_ROUTER_KEY="YOUR_API_KEY"
+```
+
+Optionally, specify a custom LLM model (default is `google/gemini-2.0-flash-lite-preview-02-05:free`):
+
+```bash
+export MODEL_NAME="your-preferred-model-name"
+```
+
+---
 
 ## Usage
 
-1.  Set your OpenRouter API key as an environment variable:
+### Using the provided script
 
-    ```bash
-    export OPEN_ROUTER_KEY="YOUR_API_KEY"
-    ```
+Run the helper script with optional flags:
 
-    (Replace `YOUR_API_KEY` with your actual OpenAI API key.)
+```bash
+scripts/createMsg.sh [-r | -c | -b]
+```
 
-2.  Run the executable:
+- `-r` : Generate **code review comments** only
+- `-c` : Generate **commit message** only
+- `-b` : Generate **both** (default if no flag is provided)
 
-    ```bash
-    ./bin/createCommitMsg
-    ```
+### Running directly with Go
 
-    or
+Alternatively, run the tool directly with customizable flags:
 
-    ```bash
-    make
-    ```
+```bash
+go run cmd/main.go --mode [r|c|b] --output [r|c|b] --format [r|j]
+```
 
-    And then run the script after setting the OpenRouter API key.
+- `--mode`:
 
-    This will generate a commit message based on the staged changes in your Git repository.
+  - `r` or `review` : generate **code review comments** only
+  - `c` or `comment` : generate **commit message** only
+  - `b` or `both` (default) : generate **both**
 
-## Contributing
+- `--output`:
 
-We welcome contributions! Please follow these guidelines:
+  - `r` or `review` : display **code review comments** only
+  - `c` or `comment` : display **commit message** only
+  - `b` or `both` (default) : display **both**
 
-1.  Fork the repository.
-2.  Create a new branch for your feature or bug fix.
-3.  Make your changes and commit them with clear, concise commit messages.
-4.  Ensure your code passes all tests.
-5.  Submit a pull request.
+- `--format`:
+  - `r` or `raw` (default) : plain text output
+  - `j` or `json` : JSON formatted output
+
+---
+
+## How it works
+
+- The tool analyzes your **staged Git changes**.
+- It sends the changes to an LLM via OpenRouter.
+- Depending on the selected mode, it generates:
+  - A **commit message**
+  - **Code review comments**
+  - Or both
+- The output is displayed in your terminal, either as plain text or JSON.
+
+---
 
 ## Project Structure
 
-- `cmd/`: Contains the main application logic.
-- `internal/`: Contains internal packages.
-  - `internal/git/`: Git related functionalities.
-  - `internal/llm/`: LLM (Language Model) related functionalities.
-- `scripts/`: Contains shell scripts.
-  - `scripts/createMsg.sh`: Shell script to create commit message.
-- `Makefile`: Contains build instructions.
-- `go.mod`: Go module file.
-- `go.sum`: Go module checksum file.
-- `.gitignore`: Specifies intentionally untracked files that Git should ignore.
+- `cmd/` — Main CLI application
+- `internal/`
+  - `action/` — Action constants
+  - `constant/` — Constant values
+  - `display/` — Display helpers
+  - `git/` — Git integration
+  - `llm/` — LLM API integration
+  - `prompt/` — Prompt templates
+- `scripts/`
+  - `createMsg.sh` — Helper script to run the tool
+- `Makefile` — Build commands
+- `go.mod`, `go.sum` — Go module files
+- `.gitignore` — Git ignore rules
+
+---
+
+## Contributing
+
+We welcome contributions! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with clear commit messages
+4. Ensure all tests pass
+5. Submit a pull request
+
+---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
