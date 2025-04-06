@@ -50,3 +50,8 @@ windows:
 
 clean:
 	@rm -rf $(OUTPUT_DIR)
+
+package: clean all
+	tar -czf $(OUTPUT_DIR)/$(PROJECT_NAME)-linux-amd64.tar.gz -C $(OUTPUT_DIR) $(PROJECT_NAME)-linux-amd64
+	tar -czf $(OUTPUT_DIR)/$(PROJECT_NAME)-mac-amd64.tar.gz -C $(OUTPUT_DIR) $(PROJECT_NAME)-mac-amd64
+	zip -j $(OUTPUT_DIR)/$(PROJECT_NAME)-windows-amd64.zip $(OUTPUT_DIR)/$(PROJECT_NAME)-windows-amd64.exe
