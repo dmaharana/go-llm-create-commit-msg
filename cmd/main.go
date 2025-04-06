@@ -20,9 +20,11 @@ func main() {
 
 	// reviewCode(changes)
 	codeReviewComments := llm.CallLLM(changes, action.CODE_REVIEW)
-	log.Println("Code review comments: \n\n", codeReviewComments)
+	log.Print("Code review comments: =============================>\n\n")
+	log.Print(codeReviewComments)
 
 	// generate commit message
 	commitMsg := llm.CallLLM(changes, action.COMMIT_MESSAGE)
-	log.Println("Commit message:", commitMsg)
+	log.Print("Commit message: =============================>\n\n")
+	log.Print(commitMsg)
 }
