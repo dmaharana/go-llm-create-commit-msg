@@ -23,5 +23,5 @@ done
 MODE=${MODE:-"both"}
 
 # Run the main program with the selected mode
-export OPEN_ROUTER_KEY="sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Replace with your actual API key
-go run main.go --mode "$MODE"
+export LLM_API_KEY=${LLM_API_KEY:-"sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"} # Replace with your actual API key
+go run cmd/main.go --mode "$MODE"

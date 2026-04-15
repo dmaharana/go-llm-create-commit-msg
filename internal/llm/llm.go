@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"regexp"
+	"strings"
 
 	"createCommitMsg/internal/action"
 	"createCommitMsg/internal/constant"
@@ -16,17 +16,34 @@ import (
 )
 
 const (
-	openRouterApi = "https://openrouter.ai/api/v1"
-	defaultModel  = "google/gemini-2.0-flash-lite-preview-02-05:free"
+	defaultBaseURL = "https://openrouter.ai/api/v1"
+	defaultModel   = "google/gemini-2.0-flash-lite-preview-02-05:free"
 
 	// maxTokens is the maximum number of tokens to generate.
 	maxTokens = 4096
 )
 
-var model string
+var (
+	baseURL string
+	apiKey  string
+	model   string
+)
 
 func init() {
-	model = os.Getenv("MODEL_NAME")
+	baseURL = os.Getenv("LLM_BASE_URL")
+	if baseURL == "" {
+		baseURL = defaultBaseURL
+	}
+
+	apiKey = strings.TrimSpace(os.Getenv("LLM_API_KEY"))
+	if apiKey == "" {
+		apiKey = strings.TrimSpace(os.Getenv("OPEN_ROUTER_KEY"))
+	}
+
+	model = os.Getenv("LLM_MODEL")
+	if model == "" {
+		model = os.Getenv("MODEL_NAME")
+	}
 	if model == "" {
 		model = defaultModel
 	}
@@ -46,12 +63,10 @@ func CallLLM(changes string, roles []string) (map[string]string, error) {
 	// sanitize changes
 	changes = SanitizeInput(changes)
 
-	llmBaseURL := openRouterApi
-
 	client, err := openai.New(
-		openai.WithBaseURL(llmBaseURL),                 // Set OpenRouter base URL
-		openai.WithToken(os.Getenv("OPEN_ROUTER_KEY")), // Use OpenRouter API key
-		openai.WithModel(model),                        // Specify the model
+		openai.WithBaseURL(baseURL), // Set LLM base URL
+		openai.WithToken(apiKey),    // Use LLM API key
+		openai.WithModel(model),     // Specify the model
 	)
 	if err != nil {
 		log.Fatal("Error initializing LLM:", err)
@@ -75,19 +90,17 @@ func CallLLM(changes string, roles []string) (map[string]string, error) {
 	}
 	content = append(content, llms.TextParts(llms.ChatMessageTypeHuman, changes))
 
-	// Call the OpenRouter API via the client if streaming is needed
-	// resp, err := client.GenerateContent(ctx, content,
-	// 	llms.WithMaxTokens(1024),
-	// 	llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
-	// 		log.Print(string(chunk))
-	// 		return nil
-	// 	}))
-
-	// create chat request
-	resp, err := client.GenerateContent(ctx, content, llms.WithMaxTokens(maxTokens))
+	// Some proxies (like dialagram.me) force streaming even if not requested.
+	// Providing a no-op streaming function tells langchaingo to use the SSE parser.
+	resp, err := client.GenerateContent(ctx, content,
+		llms.WithMaxTokens(maxTokens),
+		llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+			return nil
+		}),
+	)
 	if err != nil {
-		// log.Fatal(err)
 		log.Printf("Error calling API: %v\n", err)
+		log.Printf("BaseURL: %s, Model: %s\n", baseURL, model)
 		return nil, err
 	}
 
@@ -184,8 +197,10 @@ func RemoveDuplicates(strSlice []string) []string {
 	return list
 }
 
-// sanitize input to remove potentially harmful content
+// sanitize input to remove potentially harmful content while preserving diffs/JSON
 func SanitizeInput(input string) string {
-	tmp := regexp.MustCompile(`[^a-zA-Z0-9 ]`).ReplaceAllString(input, " ")
-	return regexp.MustCompile(`[<>]`).ReplaceAllString(tmp, "")
+	// Only remove actual control characters or potentially dangerous script tags if necessary.
+	// For now, let's just remove null bytes and strip leading/trailing whitespace.
+	input = strings.ReplaceAll(input, "\x00", "")
+	return strings.TrimSpace(input)
 }

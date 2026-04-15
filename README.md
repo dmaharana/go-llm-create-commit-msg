@@ -31,17 +31,27 @@ A command-line tool that uses Large Language Models (LLMs) via OpenRouter to gen
 
 ## Configuration
 
-Set your OpenRouter API key as an environment variable:
+Set your LLM API key as an environment variable:
 
 ```bash
-export OPEN_ROUTER_KEY="YOUR_API_KEY"
+export LLM_API_KEY="YOUR_API_KEY"
+```
+
+*Note: For backward compatibility, `OPEN_ROUTER_KEY` is also supported.*
+
+Optionally, specify a custom LLM base URL (default is `https://openrouter.ai/api/v1`):
+
+```bash
+export LLM_BASE_URL="https://your-llm-provider.com/api/v1"
 ```
 
 Optionally, specify a custom LLM model (default is `google/gemini-2.0-flash-lite-preview-02-05:free`):
 
 ```bash
-export MODEL_NAME="your-preferred-model-name"
+export LLM_MODEL="your-preferred-model-name"
 ```
+
+*Note: For backward compatibility, `MODEL_NAME` is also supported.*
 
 ---
 
