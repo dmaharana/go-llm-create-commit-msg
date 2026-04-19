@@ -13,7 +13,7 @@ func main() {
 		log.Printf("Error getting staged changes in JSON: %v\n", err)
 		return
 	}
-	if gitDiffs == "" {
+	if gitDiffs == "null" || gitDiffs == "[]" {
 		log.Println("No staged changes found in JSON")
 		return
 	}

@@ -93,9 +93,9 @@ func main() {
 		log.Printf("Error getting staged changes in JSON: %v\n", err)
 		return
 	}
-	log.Println("Staged changes length:", len(changes))
-	if changes == "" {
-		log.Println("No staged changes found.")
+
+	if changes == "null" || changes == "[]" {
+		fmt.Println("No staged changes found. Please stage your changes before running this tool.")
 		return
 	}
 

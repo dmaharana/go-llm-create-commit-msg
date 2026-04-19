@@ -90,7 +90,7 @@ func parseDiffOutput(diffOutput string) []GitDiff {
 }
 
 func parseDiffLines(diffLines []string) []GitDiff {
-	var changes []GitDiff
+	changes := []GitDiff{}
 	var currentFileState = newFileState()
 
 	for _, line := range diffLines {
